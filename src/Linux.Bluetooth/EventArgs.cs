@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Tmds.DBus;
 
 namespace Linux.Bluetooth
 {
@@ -21,6 +22,16 @@ namespace Linux.Bluetooth
     }
 
     public Device Device { get; }
+  }
+
+  public class DeviceRemovedEventArgs : EventArgs
+  {
+    public DeviceRemovedEventArgs(ObjectPath objectPath)
+    {
+      ObjectPath = objectPath;
+    }
+
+    public ObjectPath ObjectPath { get; }
   }
 
   public class GattCharacteristicValueEventArgs : EventArgs

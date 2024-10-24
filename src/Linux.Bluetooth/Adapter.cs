@@ -7,6 +7,7 @@ using Tmds.DBus;
 namespace Linux.Bluetooth
 {
   public delegate Task DeviceChangeEventHandlerAsync(Adapter sender, DeviceFoundEventArgs eventArgs);
+  public delegate Task DeviceRemoveEventHandlerAsync(Adapter sender, DeviceRemovedEventArgs eventArgs);
 
   public delegate Task AdapterEventHandlerAsync(Adapter sender, BlueZEventArgs eventArgs);
 
@@ -20,6 +21,7 @@ namespace Linux.Bluetooth
     private IDisposable _interfacesWatcher;
     private IDisposable _propertyWatcher;
     private DeviceChangeEventHandlerAsync _deviceFound;
+    private DeviceRemoveEventHandlerAsync _deviceRemoved;
     private AdapterEventHandlerAsync _poweredOn;
     private IObjectManager _objectManager;
 
@@ -37,6 +39,7 @@ namespace Linux.Bluetooth
 
       adapter._objectManager = Connection.System.CreateProxy<IObjectManager>(BluezConstants.DbusService, "/");
       adapter._interfacesWatcher = await adapter._objectManager.WatchInterfacesAddedAsync(adapter.OnDeviceAddedAsync);
+      adapter._interfacesWatcher = await adapter._objectManager.WatchInterfacesRemovedAsync(adapter.OnDeviceRemovedAsync);
       adapter._propertyWatcher = await proxy.WatchPropertiesAsync(adapter.OnPropertyChanges);
 
       return adapter;
@@ -60,6 +63,18 @@ namespace Linux.Bluetooth
       remove
       {
         _deviceFound -= value;
+      }
+    }
+
+    public event DeviceRemoveEventHandlerAsync DeviceRemoved
+    {
+      add
+      {
+        _deviceRemoved += value;
+      }
+      remove
+      {
+        _deviceRemoved -= value;
       }
     }
 
@@ -217,6 +232,14 @@ namespace Linux.Bluetooth
 
         var dev = await Device.CreateAsync(device);
         _deviceFound?.Invoke(this, new DeviceFoundEventArgs(dev));
+      }
+    }
+
+    private void OnDeviceRemovedAsync((ObjectPath objectPath, string[] interfaces) args)
+    {
+      if (BlueZManager.IsMatch(BluezConstants.DeviceInterface, args.objectPath, args.interfaces, this))
+      {
+        _deviceRemoved?.Invoke(this, new DeviceRemovedEventArgs(args.objectPath));
       }
     }
 
