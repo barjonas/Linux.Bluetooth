@@ -5,6 +5,7 @@ using Tmds.DBus;
 namespace Linux.Bluetooth
 {
   public delegate Task DeviceEventHandlerAsync(Device sender, BlueZEventArgs eventArgs);
+  public delegate Task DevicePropertyChangedEventHandlerAsync(Device sender, string propertyName);
 
   /// <summary>
   /// Adds events to IDevice1.
@@ -14,11 +15,9 @@ namespace Linux.Bluetooth
   /// </remarks>
   public class Device : IDevice1, IDisposable
   {
-    private const string DeviceConnected = "Connected";
-    private const string DeviceServicesResolved = "ServicesResolved";
-
     private IDevice1 _proxy;
     private IDisposable _propertyWatcher;
+    private DeviceProperties _deviceProperties = new();
 
     private event DeviceEventHandlerAsync OnConnected;
 
@@ -62,6 +61,7 @@ namespace Linux.Bluetooth
       }
     }
 
+    public event DevicePropertyChangedEventHandlerAsync? PropertyChanged;
     public event DeviceEventHandlerAsync Disconnected;
 
     public event DeviceEventHandlerAsync ServicesResolved
@@ -159,39 +159,41 @@ namespace Linux.Bluetooth
       return _proxy.GetAsync<T>(prop);
     }
 
-    /// <summary>Gets all properties for device.</summary>
+    /// <summary>Requests an update to the device's properties and returns the result.</summary>
     /// <returns><seealso cref="DeviceProperties"/> object.</returns>
     public async Task<DeviceProperties> GetPropertiesAsync()
     {
       var p = await _proxy.GetAllAsync();
 
-      var props = new DeviceProperties
-      {
-        Address = p.Address,
-        AddressType = p.AddressType,
-        Alias = p.Alias,
-        Appearance = p.Appearance,
-        Blocked = p.Blocked,
-        Class = p.Class,
-        Connected = p.Connected, // Connected is marked for deprecation (2024-01-11)
-        IsConnected = p.Connected,
-        Icon = p.Icon,
-        LegacyPairing = p.LegacyPairing,
-        ManufacturerData = p.ManufacturerData,
-        Modalias = p.Modalias,
-        Name = p.Name,
-        Paired = p.Paired,
-        RSSI = p.RSSI,    // RSSI is marked for deprecation (2024-01-11)
-        Rssi = p.RSSI,
-        ServiceData = p.ServiceData,
-        ServicesResolved = p.ServicesResolved,
-        Trusted = p.Trusted,
-        TxPower = p.TxPower,
-        UUIDs = p.UUIDs,
-      };
+      _deviceProperties.Address = p.Address;
+      _deviceProperties.AddressType = p.AddressType;
+      _deviceProperties.Alias = p.Alias;
+      _deviceProperties.Appearance = p.Appearance;
+      _deviceProperties.Blocked = p.Blocked;
+      _deviceProperties.Class = p.Class;
+      _deviceProperties.Connected = p.Connected; // Connected is marked for deprecation (2024-01-11)
+      _deviceProperties.IsConnected = p.Connected;
+      _deviceProperties.Icon = p.Icon;
+      _deviceProperties.LegacyPairing = p.LegacyPairing;
+      _deviceProperties.ManufacturerData = p.ManufacturerData;
+      _deviceProperties.Modalias = p.Modalias;
+      _deviceProperties.Name = p.Name;
+      _deviceProperties.Paired = p.Paired;
+      _deviceProperties.RSSI = p.RSSI;    // RSSI is marked for deprecation (2024-01-11)
+      _deviceProperties.Rssi = p.RSSI;
+      _deviceProperties.ServiceData = p.ServiceData;
+      _deviceProperties.ServicesResolved = p.ServicesResolved;
+      _deviceProperties.Trusted = p.Trusted;
+      _deviceProperties.TxPower = p.TxPower;
+      _deviceProperties.UUIDs = p.UUIDs;
 
-      return props;
+      return _deviceProperties;
     }
+
+    /// <summary>
+    /// Returns an object containing the latest values of the device's properties received so far.
+    /// </summary>
+    public DeviceProperties Properties { get => _deviceProperties; }
 
     public Task PairAsync()
     {
@@ -231,18 +233,94 @@ namespace Linux.Bluetooth
       {
         switch (pair.Key)
         {
-          case DeviceConnected:
+          case nameof(Device1Properties.Connected):
             if (true.Equals(pair.Value))
               OnConnected?.Invoke(this, new BlueZEventArgs());
             else
               Disconnected?.Invoke(this, new BlueZEventArgs());
-
+            _deviceProperties.IsConnected = (bool)pair.Value;
+            _deviceProperties.Connected = _deviceProperties.IsConnected;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.IsConnected));
             break;
 
-          case DeviceServicesResolved:
+          case nameof(Device1Properties.ServicesResolved):
             if (true.Equals(pair.Value))
               OnResolved?.Invoke(this, new BlueZEventArgs());
+            _deviceProperties.ServicesResolved = (bool)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.ServicesResolved));
+            break;
 
+          case nameof(Device1Properties.RSSI):
+            _deviceProperties.Rssi = (short)pair.Value;
+            _deviceProperties.RSSI = _deviceProperties.Rssi;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Rssi));
+            break;
+          case nameof(Device1Properties.TxPower):
+            _deviceProperties.TxPower = (short)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.TxPower));
+            break;
+          case nameof(Device1Properties.Class):
+            _deviceProperties.Class = (uint)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Class));
+            break;
+          case nameof(Device1Properties.Icon):
+            _deviceProperties.Icon = (string)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Icon));
+            break;
+          case nameof(Device1Properties.Modalias):
+            _deviceProperties.Modalias = (string)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Modalias));
+            break;
+          case nameof(Device1Properties.Name):
+            _deviceProperties.Name = (string)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Name));
+            break;
+          case nameof(Device1Properties.Paired):
+            _deviceProperties.Paired = (bool)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Paired));
+            break;
+          case nameof(Device1Properties.Trusted):
+            _deviceProperties.Trusted = (bool)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Trusted));
+            break;
+          case nameof(Device1Properties.Blocked):
+            _deviceProperties.Blocked = (bool)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Blocked));
+            break;
+          case nameof(Device1Properties.Alias):
+            _deviceProperties.Alias = (string)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Alias));
+            break;
+          case nameof(Device1Properties.Address):
+            _deviceProperties.Address = (string)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Address));
+            break;
+          case nameof(Device1Properties.AddressType):
+            _deviceProperties.AddressType = (string)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.AddressType));
+            break;
+          case nameof(Device1Properties.Appearance):
+            _deviceProperties.Appearance = (ushort)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.Appearance));
+            break;
+          case nameof(Device1Properties.ManufacturerData):
+            _deviceProperties.ManufacturerData = (System.Collections.Generic.IDictionary<UInt16, object>)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.ManufacturerData));
+            break;
+          case nameof(Device1Properties.ServiceData):
+            _deviceProperties.ServiceData = (System.Collections.Generic.IDictionary<string, object>)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.ServiceData));
+            break;
+          case nameof(Device1Properties.UUIDs):
+            _deviceProperties.UUIDs = (string[])pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.UUIDs));
+            break;
+          case nameof(Device1Properties.Bonded):
+            _deviceProperties.IsBonded = (bool)pair.Value;
+            PropertyChanged?.Invoke(this, nameof(DeviceProperties.IsBonded));
+            break;
+          default:
+            Console.WriteLine($"Unhandled property change: {pair.Key}");
             break;
         }
       }
