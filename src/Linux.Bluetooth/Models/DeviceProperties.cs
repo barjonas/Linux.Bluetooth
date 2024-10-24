@@ -93,6 +93,9 @@ namespace Linux.Bluetooth
     /// <summary>Readonly. Indicates if the remote device is paired.</summary>
     public bool Paired { get; set; }
 
+    /// <summary>Readonly. Indicates if the remote device is bonded.</summary>
+    public bool IsBonded { get; set; }
+
     /// <summary>Optional, readonly. Received Signal Strength Indicator of the remote device(inquiry or advertising).</summary>
     [Obsolete("Use the preferred, Rssi, property")]
     public short RSSI { get; set; }

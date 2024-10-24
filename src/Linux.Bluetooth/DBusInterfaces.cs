@@ -495,6 +495,20 @@ namespace Linux.Bluetooth
       }
     }
 
+    private bool _Bonded = default(bool);
+    public bool Bonded
+    {
+      get
+      {
+        return _Bonded;
+      }
+
+      set
+      {
+        _Bonded = (value);
+      }
+    }
+
     private bool _Trusted = default(bool);
     public bool Trusted
     {
