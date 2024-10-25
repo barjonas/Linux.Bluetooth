@@ -173,6 +173,7 @@ namespace Linux.Bluetooth
       _deviceProperties.Class = p.Class;
       _deviceProperties.Connected = p.Connected; // Connected is marked for deprecation (2024-01-11)
       _deviceProperties.IsConnected = p.Connected;
+      _deviceProperties.IsBonded = p.Bonded;
       _deviceProperties.Icon = p.Icon;
       _deviceProperties.LegacyPairing = p.LegacyPairing;
       _deviceProperties.ManufacturerData = p.ManufacturerData;
